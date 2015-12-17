@@ -52,8 +52,9 @@ Throws `UploadException` on failure.
 function upload(src, dest)
     f = open(src, "r")
     resp = S3.put_object(g_awsenv, AWSBKT, dest, f)
-    resp != 200 && throw(UploadException(src, dest))
+    resp.http_code != 200 && throw(UploadException(src, dest, resp))
     close(f)
+    info("[Upload]: $src -> $dest")
 end
 
 """

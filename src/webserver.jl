@@ -1,9 +1,7 @@
 # Web interface to query the log database.
-using SQLite, Mux, JSON
+using SQLite, Mux, JSON, LogMover
 
-include("consts.jl")
-
-DB = SQLite.DB(DBNAME)
+DB = SQLite.DB(LogMover.DBNAME)
 
 """
 Get the data from SQLite DB for the query `qry` which is a JSON encoded in string

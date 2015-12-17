@@ -15,7 +15,6 @@ immutable Log
     tstamp::DateTime
 
     function Log(src, dest)
-        @show src
         !isfile(src) && error("File $src does not exist.")
         st = stat(src)
         mtime = unix2datetime(st.mtime)
@@ -34,6 +33,7 @@ Exception for failures in upload of log files.
 type UploadException <: LogMoverException
     src::AbstractString
     dest::AbstractString
+    resp::S3Response
 end
 
 """
@@ -44,7 +44,7 @@ type DaemonException <: LogMoverException
 end
 
 Base.showerror(io::IO, e::UploadException) =
-    print(io, "Failed to upload file: $(e.src) -> $(e.dest)")
+    print(io, "Failed to upload file: $(e.src) -> $(e.dest), S3 response is $(e.resp)")
 
 Base.showerror(io::IO, e::DaemonException) =
     print(io, e.msg)

@@ -19,7 +19,7 @@ function daemon()
         while g_switch && g_plug
             msgflag = true
             tic()
-            logmove(logs)
+            logmove()
             twait = INTERVAL * 60 - toq()
             if twait > 0
                 sleep(twait)
