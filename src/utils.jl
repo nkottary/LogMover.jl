@@ -1,4 +1,5 @@
-DB = SQLite.DB(DBNAME)
+g_db = SQLite.DB(DBNAME)
+g_awsenv = AWSEnv(id=AWSID, key=AWSKEY)
 
 """
 Convert datetime to directory path.  The format of the path is:
@@ -14,14 +15,29 @@ datetime2path(dt) = joinpath(map(string, [year(dt), month(dt), day(dt),
 """
 Move the log files in the array of `Log` instances `logs`.
 """
-function logmove(logs)
+function logmove()
+    currtime = now()
+    info("[Upload]: Started.")
+    tpath = datetime2path(currtime)
+    for log in LOGS
+        fulldest = joinpath(log.dest, tpath)
+        upload(log.src, fulldest)
+        dbentry(log, fulldest, currtime)
+    end
+    info("[Upload]: Done.")
+end
+
+"""
+Local testing version of logmove.
+"""
+function _logmove(logs)
     currtime = now()
     info("[Upload]: Started.")
     tpath = datetime2path(currtime)
     for log in logs
         fulldest = joinpath(log.dest, tpath)
         pathexists(fulldest) || createpath(fulldest)
-        upload(log.src, fulldest)
+        _upload(log.src, fulldest)
         dbentry(log, fulldest, currtime)
     end
     info("[Upload]: Done.")
@@ -34,6 +50,16 @@ Upload file given by local path `src` to S3 destination given
 Throws `UploadException` on failure.
 """
 function upload(src, dest)
+    f = open(src, "r")
+    resp = S3.put_object(g_awsenv, AWSBKT, dest, f)
+    resp != 200 && throw(UploadException(src, dest))
+    close(f)
+end
+
+"""
+Local upload for testing purposes.
+"""
+function _upload(src, dest)
     cp(src, dest, remove_destination=true)
     info("[Upload]: $src -> $dest")
 end
@@ -66,6 +92,6 @@ Throws `SQLite.SQLiteException` on failure.
 function dbentry(log, fulldest, uploadtime)
     tstamp = replace(string(log.tstamp), "T", " ")
     uptime = replace(string(uploadtime), "T", " ")
-    SQLite.execute!(DB, "insert into logs (src, dest, size, tstamp, tupload) values ('$(log.src)', '$fulldest', $(log.sz), '$tstamp', '$uptime')")
+    SQLite.execute!(g_db, "insert into logs (src, dest, size, tstamp, tupload) values ('$(log.src)', '$fulldest', $(log.sz), '$tstamp', '$uptime')")
     info("[Database]: Made entry for $(log.src)")
 end

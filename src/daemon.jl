@@ -10,18 +10,17 @@ g_cond = nothing         # For wait() and notify()
 Logging.configure(level=INFO, filename=joinpath(Pkg.dir("LogMover"), "logmover.log"))
 
 """
-A daemon that uploades log files every `interval`
- minutes to S3. The details for the log files are
- given in the `logs` array.
+A daemon that uploades log files every `INTERVAL`
+ minutes to S3.
 """
-function daemon(logs, interval)
+function daemon()
     global g_plug, g_switch, g_cond
     while g_plug
         while g_switch && g_plug
             msgflag = true
             tic()
             logmove(logs)
-            twait = interval * 60 - toq()
+            twait = INTERVAL * 60 - toq()
             if twait > 0
                 sleep(twait)
             else
@@ -39,7 +38,7 @@ end
 """
 Start the daemon as a `Task`.
 """
-function startdaemon(logs, interval)
+function startdaemon()
     global g_plug, g_switch, g_cond
     g_plug == true && throw(DaemonException("Daemon already running. Please stop current daemon by calling `stop()`"))
 
@@ -48,9 +47,9 @@ function startdaemon(logs, interval)
     g_cond = Condition()
 
     info("[Daemon]: Starting...")
-    dmn = @task daemon(logs, interval)
+    dmn = @task daemon()
     schedule(dmn)
-    info("[Daemon]: Started with interval $interval minutes.")
+    info("[Daemon]: Started with interval $INTERVAL minutes.")
     return dmn
 end
 

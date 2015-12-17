@@ -15,6 +15,8 @@ immutable Log
     tstamp::DateTime
 
     function Log(src, dest)
+        @show src
+        !isfile(src) && error("File $src does not exist.")
         st = stat(src)
         mtime = unix2datetime(st.mtime)
         tstamp = DateTime(year(mtime), month(mtime), day(mtime),
@@ -24,20 +26,14 @@ immutable Log
 end
 
 Base.show(io::IO, log::Log) =
-    print(io, "Log\n====\nsrc: $(log.src)\ndest: $(log.dest)\nsize: $(log.sz)\ntimestamp: $(log.tstamp)\n")
+    print(io, "Log\n=======================================================\nsrc:\t\t$(log.src)\ndest:\t\t$(log.dest)\nsize:\t\t$(log.sz)\ntimestamp:\t$(log.tstamp)\n")
 
 """
 Exception for failures in upload of log files.
 """
 type UploadException <: LogMoverException
-    log::Log
-end
-
-"""
-Exception for failure to create remote path.
-"""
-type CreatePathException <: LogMoverException
-    path::AbstractString
+    src::AbstractString
+    dest::AbstractString
 end
 
 """
@@ -48,10 +44,7 @@ type DaemonException <: LogMoverException
 end
 
 Base.showerror(io::IO, e::UploadException) =
-    print(io, "Failed to upload file: $(e.log)")
-
-Base.showerror(io::IO, e::CreatePathException) =
-    print(io, "Failed to create path $(e.path)")
+    print(io, "Failed to upload file: $(e.src) -> $(e.dest)")
 
 Base.showerror(io::IO, e::DaemonException) =
     print(io, e.msg)
