@@ -87,4 +87,4 @@ function pause()
     g_switch = false
 end
 
-export startdaemon, stop, pause, unpause, getstate
+export startdaemon, stop, pause, unpause

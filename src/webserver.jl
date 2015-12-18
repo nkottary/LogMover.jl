@@ -1,7 +1,4 @@
-# Web interface to query the log database.
-using SQLite, Mux, JSON, LogMover
-
-DB = SQLite.DB(LogMover.DBNAME)
+# Web server.
 
 """
 Get the data from SQLite DB for the query `qry` which is a JSON encoded in string
@@ -19,6 +16,9 @@ end
   page("/", req -> getdata(bytestring(req[:data]))),
   Mux.notfound())
 
-runserver() = serve(test)
+"""
+Start web server.
+"""
+startserver() = serve(test)
 
-
+export startserver
