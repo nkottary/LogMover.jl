@@ -13,6 +13,6 @@ let
     delete!(conf._data, "local")
     global LOGS = []
     for (k, v) in conf._data
-        push!(LOGS, Log(ASCIIString(v["src"][1]), ASCIIString(v["dest"][1])))
+        push!(LOGS, LogDir(ASCIIString(v["src"][1]), ASCIIString(v["dest"][1])))
     end
 end

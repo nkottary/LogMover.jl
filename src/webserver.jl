@@ -1,5 +1,7 @@
 # Web server.
 
+DB = SQLite.DB(DBNAME)
+
 """
 Get the data from SQLite DB for the query `qry` which is a JSON encoded in string
  from the `Request` object.

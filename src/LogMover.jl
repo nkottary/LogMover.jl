@@ -6,4 +6,5 @@ module LogMover
     include("consts.jl")
     include("utils.jl")
     include("daemon.jl")
+    include("webserver.jl")
 end

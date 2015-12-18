@@ -8,24 +8,32 @@ Type for holding the details of the log file.
  `sz` -> The size in bytes of the file.
  `tstamp` -> The create timestamp of the file.
 """
-immutable Log
+immutable LogDir
     src::AbstractString
     dest::AbstractString
-    sz::Int
-    tstamp::DateTime
 
-    function Log(src, dest)
-        !isfile(src) && error("File $src does not exist.")
-        st = stat(src)
-        mtime = unix2datetime(st.mtime)
-        tstamp = DateTime(year(mtime), month(mtime), day(mtime),
-                          hour(mtime), minute(mtime), second(mtime))
-        new(src, dest, st.size, tstamp)
+    function LogDir(src, dest)
+        !isdir(src) && error("Directory $src does not exist.")
+        new(src, dest)
     end
 end
 
-Base.show(io::IO, log::Log) =
-    print(io, "Log\n=======================================================\nsrc:\t\t$(log.src)\ndest:\t\t$(log.dest)\nsize:\t\t$(log.sz)\ntimestamp:\t$(log.tstamp)\n")
+Base.show(io::IO, log::LogDir) =
+    print(io, "Log Directory\n=======================================================\nsrc:\t\t$(log.src)\ndest:\t\t$(log.dest)\n")
+
+"""
+Context for argument passing.
+"""
+type LogMoverCtx
+    db::SQLite.DB
+    awsenv::AWSEnv
+    last_upload_time::Float64
+    new_upload_time::Float64
+
+    function LogMoverCtx(db, awsenv)
+        new(db, awsenv, 0, 0)
+    end
+end
 
 """
 Exception for failures in upload of log files.
@@ -50,4 +58,4 @@ Base.showerror(io::IO, e::DaemonException) =
     print(io, e.msg)
 
 export LogMoverException, UploadException, CreatePathException,
-       DaemonException, Log
+       DaemonException, LogDir

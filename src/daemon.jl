@@ -14,13 +14,28 @@ A daemon that uploades log files every `INTERVAL`
  minutes to S3.
 """
 function daemon()
+    ctx = LogMoverCtx(SQLite.DB(DBNAME), AWSEnv(id=AWSID, key=AWSKEY))
+
+    currtime = unix2datetime(time())
+    currmin = minute(currtime)
+
+    #= If minutes is not a multiple of `INTERVAL` minutes wait
+       for a multiple of `INTERVAL` minutes before starting. 
+    =#
+    if rem(currmin, INTERVAL) != 0
+        minwait = INTERVAL * (div(currmin, INTERVAL) + 1) - currmin
+        sleep(minwait * 60)
+    end
+
     global g_plug, g_switch, g_cond
     while g_plug
         while g_switch && g_plug
             msgflag = true
             tic()
-            logmove()
-            twait = INTERVAL * 60 - toq()
+            ctx.new_upload_time = time()
+            logmove(ctx)
+            ctx.last_upload_time = ctx.new_upload_time
+            twait = (INTERVAL * 60) - toq()
             if twait > 0
                 sleep(twait)
             else
