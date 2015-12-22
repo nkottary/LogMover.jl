@@ -7,7 +7,10 @@ g_switch = false         # Signifies whether daemon is paused (false)
                          # or unpaused (true).
 g_cond = nothing         # For wait() and notify()
 
-Logging.configure(level=INFO, filename=joinpath(Pkg.dir("LogMover"), "logmover.log"))
+Logging.configure(level=INFO,
+                  filename=joinpath(Pkg.dir("LogMover"), 
+                                    "logmover.log"),
+                  override_info=true)
 
 """
 A daemon that uploades log files every `INTERVAL`

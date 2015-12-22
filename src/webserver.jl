@@ -1,5 +1,7 @@
 # Web server.
 
+# TODO: Implement summaries.
+
 DB = SQLite.DB(DBNAME)
 
 """
@@ -10,7 +12,7 @@ function getdata(qry)
     js = JSON.parse(qry)
     mintime = js["mintime"]
     maxtime = js["maxtime"]
-    return JSON.json(SQLite.query(DB, "select * from logs where tupload > '$mintime' AND tupload < '$maxtime';"))
+    return JSON.json(SQLite.query(DB, "select * from logs where logtime > '$mintime' AND logtime < '$maxtime';"))
 end
 
 @app test = (

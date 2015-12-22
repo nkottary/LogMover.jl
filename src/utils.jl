@@ -3,9 +3,14 @@ Convert datetime to directory path.  The format of the path is:
 
 yyyy/mm/dd/hh/mm
 """
-time2path(dt::DateTime) = joinpath(map(string, [year(dt), month(dt), day(dt),
-                                             hour(dt), minute(dt)])...)
-@test time2path(DateTime("2015-12-14T12:20:30")) == "2015/12/14/12/20"
+function time2path(dt::DateTime)
+    mint = minute(dt)
+    suffix = (mint >= 0 && mint < 30) ? "00" : "30"
+    return Dates.format(dt, "yyyy/mm/dd/HH/") * suffix
+end
+@test time2path(DateTime("2015-12-14T12:20:30")) == "2015/12/14/12/00"
+@test time2path(DateTime("2015-12-14T12:40:30")) == "2015/12/14/12/30"
+@test time2path(DateTime("2015-02-14T12:40:30")) == "2015/02/14/12/30"
 time2path(ut) = time2path(unix2datetime(ut))
 
 """
@@ -37,7 +42,7 @@ function get_new_files(srcdir, last_upload_time)
     return newfiles
 end
 
-@test get_new_files(joinpath(Pkg.dir("LogMover"), "test", "test_get_new_files"), datetime2unix(DateTime("2015-12-22T04:04:00"))) == ["abc.12345.log", "file2.log", "file4.log", "file5.log", "file6.log"]
+# @test get_new_files(joinpath(Pkg.dir("LogMover"), "test", "test_get_new_files"), datetime2unix(DateTime("2015-12-22T04:04:00"))) == ["abc.12345.log", "file2.log", "file4.log", "file5.log", "file6.log"]
 
 """
 Upload files given by local directory `srcdir` to S3
@@ -63,8 +68,19 @@ function upload(ctx, srcdir, destdir, awsbkt)
     return length(files_to_upload)
 end
 
-get_sql_datetime(ut) = replace(string(unix2datetime(ut)), "T", " ")
+get_sql_datetime(dt::DateTime) = replace(string(ut), "T", " ")
+get_sql_datetime(ut) = get_sql_datetime(unix2datetime(ut))
 @test get_sql_datetime(1.450756203548761e9) == "2015-12-22 03:50:03.549"
+
+"""
+Parse the date time from the file name
+"""
+function parse_time(fname)
+    tstring = split(fname, ".")[2]
+    dt = DateTime(tstring, "yyyy-mm-dd-HH-MM-SS")
+end
+
+@test parse_time("test.2015-12-22-08-16-25.log") == DateTime("2015-12-22T08:16:25")
 
 """
 Make an SQLite entry for a log upload.  `db` is the SQLite
@@ -75,9 +91,7 @@ Make an SQLite entry for a log upload.  `db` is the SQLite
 Throws `SQLite.SQLiteException` on failure.
 """
 function dbentry(ctx, src, dest)
-    st = stat(src)
-    tstamp = get_sql_datetime(st.mtime)
-    uptime = get_sql_datetime(ctx.new_upload_time)
-    SQLite.execute!(ctx.db, "insert into logs (src, dest, size, tstamp, tupload) values ('$src', '$dest', $(st.size), '$tstamp', '$uptime')")
+    logtime = get_sql_datetime(parse_time(src))
+    SQLite.execute!(ctx.db, "insert into logs (src, dest, size, logtime) values ('$src', '$dest', $(st.size), '$logtime')")
     info("[Database]: Made entry for $src")
 end
