@@ -21,6 +21,9 @@ end
 """
 Start web server.
 """
-startserver() = serve(test)
+function startserver()
+    serve(test)
+    info("Web server started.")
+end
 
 export startserver

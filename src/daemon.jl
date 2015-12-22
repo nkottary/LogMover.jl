@@ -53,7 +53,7 @@ end
 """
 Start the daemon as a `Task`.
 """
-function startdaemon()
+function startd()
     global g_plug, g_switch, g_cond
     g_plug == true && throw(DaemonException("Daemon already running. Please stop current daemon by calling `stop()`"))
 
@@ -102,4 +102,4 @@ function pause()
     g_switch = false
 end
 
-export startdaemon, stop, pause, unpause
+export startd, stop, pause, unpause

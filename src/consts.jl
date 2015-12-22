@@ -7,12 +7,15 @@ let
 
     global const AWSID = ASCIIString(retrieve(conf, "s3", "id"))
     global const AWSKEY = ASCIIString(retrieve(conf, "s3", "key"))
-    global const AWSBKT = ASCIIString(retrieve(conf, "s3", "bkt"))
 
     delete!(conf._data, "s3")
     delete!(conf._data, "local")
     global LOGS = []
     for (k, v) in conf._data
-        push!(LOGS, LogDir(ASCIIString(v["src"][1]), ASCIIString(v["dest"][1])))
+        parseddest = URI(ASCIIString(v["dest"][1]))
+        parseddest.scheme != "s3" && error("Invalid destination scheme $(parseddest.scheme) in destination in section $k in config.ini")
+        push!(LOGS, LogDir(ASCIIString(v["src"][1]),
+                           ASCIIString(parseddest.path),
+                           ASCIIString(parseddest.host)))
     end
 end

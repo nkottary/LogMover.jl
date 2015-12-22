@@ -16,18 +16,18 @@ function logmove(ctx)
     tpath = time2path(ctx.new_upload_time)
     for log in LOGS
         dest = joinpath(log.dest, tpath)
-        numfiles = upload(ctx, log.src, dest)
+        numfiles = upload(ctx, log.src, dest, log.awsbkt)
         numfiles == 0 && info("[Upload]: [$(log.dest)] No new files to upload this time.")
     end
     info("[Upload]: Done.")
 end
 
 """
-Get a list of files in `srcdir` directory that were created
+Get a list of *.log files in `srcdir` directory that were created
  after `last_upload_time`.
 """
 function get_new_files(srcdir, last_upload_time)
-    files = readdir(srcdir)
+    files = filter(x -> ismatch(r".+\.log$", x), readdir(srcdir))
     newfiles = Any[]
     for file in files
         st = stat(joinpath(srcdir, file))
@@ -37,7 +37,7 @@ function get_new_files(srcdir, last_upload_time)
     return newfiles
 end
 
-@test get_new_files(joinpath(Pkg.dir("LogMover"), "test", "test_get_new_files"), datetime2unix(DateTime("2015-12-18T16:34:00"))) == ["file2", "file4", "file5", "file6"]
+@test get_new_files(joinpath(Pkg.dir("LogMover"), "test", "test_get_new_files"), datetime2unix(DateTime("2015-12-22T04:04:00"))) == ["abc.12345.log", "file2.log", "file4.log", "file5.log", "file6.log"]
 
 """
 Upload files given by local directory `srcdir` to S3
@@ -45,23 +45,26 @@ Upload files given by local directory `srcdir` to S3
 
 Throws `UploadException` on failure.
 """
-function upload(ctx, srcdir, destdir)
+function upload(ctx, srcdir, destdir, awsbkt)
     files_to_upload = get_new_files(srcdir, ctx.last_upload_time)
     for file in files_to_upload
         localsrc = joinpath(srcdir, file)
-        s3dest = joinpath(destdir, file)
-        open(localsrc, "r") do f
-            resp = S3.put_object(ctx.awsenv, AWSBKT, s3dest, f)
+        s3dest = joinpath(destdir, file * ".gz")
+        localsrcgz = localsrc * ".gz"
+        run(pipeline(`gzip`, stdin=localsrc, stdout=localsrcgz))
+        open(localsrcgz, "r") do f
+            resp = S3.put_object(ctx.awsenv, awsbkt, s3dest, f)
             resp.http_code != 200 && throw(UploadException(localsrc, s3dest, resp))
         end
+        rm(localsrcgz)
         info("[Upload]: $localsrc -> $s3dest")
         dbentry(ctx, localsrc, s3dest)
     end
     return length(files_to_upload)
 end
 
-get_sql_datetime(dt) = replace(string(dt), "T", " ")
-@test get_sql_datetime(DateTime("2015-12-12T12:12:12")) == "2015-12-12 12:12:12"
+get_sql_datetime(ut) = replace(string(unix2datetime(ut)), "T", " ")
+@test get_sql_datetime(1.450756203548761e9) == "2015-12-22 03:50:03.549"
 
 """
 Make an SQLite entry for a log upload.  `db` is the SQLite
@@ -73,7 +76,7 @@ Throws `SQLite.SQLiteException` on failure.
 """
 function dbentry(ctx, src, dest)
     st = stat(src)
-    tstamp = get_sql_datetime(unix2datetime(st.mtime))
+    tstamp = get_sql_datetime(st.mtime)
     uptime = get_sql_datetime(ctx.new_upload_time)
     SQLite.execute!(ctx.db, "insert into logs (src, dest, size, tstamp, tupload) values ('$src', '$dest', $(st.size), '$tstamp', '$uptime')")
     info("[Database]: Made entry for $src")

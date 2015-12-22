@@ -1,5 +1,6 @@
 module LogMover
     using SQLite, Logging, AWS, AWS.S3, ConfParser, Mux, JSON
+    using URIParser
     using Base: Dates, Test
 
     include("types.jl")

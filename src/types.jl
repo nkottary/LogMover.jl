@@ -11,15 +11,16 @@ Type for holding the details of the log file.
 immutable LogDir
     src::AbstractString
     dest::AbstractString
+    awsbkt::AbstractString
 
-    function LogDir(src, dest)
+    function LogDir(src, dest, awsbkt)
         !isdir(src) && error("Directory $src does not exist.")
-        new(src, dest)
+        new(src, dest, awsbkt)
     end
 end
 
 Base.show(io::IO, log::LogDir) =
-    print(io, "Log Directory\n=======================================================\nsrc:\t\t$(log.src)\ndest:\t\t$(log.dest)\n")
+    print(io, "Log Directory\n=======================================================\nsrc:\t\t$(log.src)\ndest:\t\t$(log.dest)\nAWS bucket:\t$(log.awsbkt)\n")
 
 """
 Context for argument passing.
