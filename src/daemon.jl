@@ -5,6 +5,7 @@
 g_plug = false           # Signifies whether daemon is done (false) or running (true).
 g_switch = false         # Signifies whether daemon is paused (false)
                          # or unpaused (true).
+g_isstopping = false     # Is in stopping state.
 g_cond = nothing         # For wait() and notify()
 
 Logging.configure(level=INFO,
@@ -18,26 +19,15 @@ A daemon that uploades log files every `INTERVAL`
 """
 function daemon()
     ctx = LogMoverCtx(SQLite.DB(DBNAME), AWSEnv(id=AWSID, key=AWSKEY))
-
-    currtime = unix2datetime(time())
-    currmin = minute(currtime)
-
-    #= If minutes is not a multiple of `INTERVAL` minutes wait
-       for a multiple of `INTERVAL` minutes before starting. 
-    =#
-    if rem(currmin, INTERVAL) != 0
-        minwait = INTERVAL * (div(currmin, INTERVAL) + 1) - currmin
-        sleep(minwait * 60)
-    end
+    sleep_for_interval_multiple()
 
     global g_plug, g_switch, g_cond
     while g_plug
         while g_switch && g_plug
-            msgflag = true
             tic()
-            ctx.new_upload_time = time()
+            getcheckpoint(ctx)
             logmove(ctx)
-            ctx.last_upload_time = ctx.new_upload_time
+            docheckpoint(ctx)
             twait = (INTERVAL * 60) - toq()
             if twait > 0
                 sleep(twait)
@@ -50,6 +40,7 @@ function daemon()
             wait(g_cond)
         end
     end
+    g_isstopping = false
     info("[Daemon]: Stopped.")
 end
 
@@ -57,8 +48,9 @@ end
 Start the daemon as a `Task`.
 """
 function startd()
-    global g_plug, g_switch, g_cond
-    g_plug == true && throw(DaemonException("Daemon already running. Please stop current daemon by calling `stop()`"))
+    global g_plug, g_switch, g_cond, g_isstopping
+    g_isstopping && throw(DaemonException("Current daemon is not yet done stopping. Please wait."))
+    g_plug && throw(DaemonException("Daemon already running. Please stop current daemon by calling `stop()`"))
 
     g_plug = true
     g_switch = true
@@ -79,6 +71,7 @@ function stop()
     global g_plug
     g_plug == false && throw(DaemonException("Cannot stop Daemon, there is no Daemon running."))
     info("[Daemon]: Stopping...")
+    g_isstopping = true
     g_plug = false
 end
 

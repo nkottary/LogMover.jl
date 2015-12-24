@@ -2,6 +2,7 @@
 
 using Logging
 using Base.Dates
+using Faker
 
 g_genfile = true
 
@@ -19,7 +20,9 @@ function genfiles(destdir, min_gap, max_gap)
     while g_genfile
         tstamp = Dates.format(unix2datetime(time()), "yyyy-mm-dd-HH-MM-SS")
         path = joinpath(destdir, "test.$tstamp.log")
-        run(`touch $path`)
+        open(path, "w") do f
+            write(f, randstring(20000 + (abs(rand(Int)) % 20000) ))
+        end
         info("Created $path")
         twait = min_gap + (abs(rand(Int)) % (max_gap - min_gap))
         sleep(twait)
@@ -31,6 +34,7 @@ function start_genfiles(logtype)
     dmn = @task genfiles(ASCIIString(joinpath(Pkg.dir("LogMover"), "test", "src", logtype)), 30, 120) # half a minute to 2 minutes.
     schedule(dmn)
     info("Started")
+    global g_genfile = true
     nothing
 end
 

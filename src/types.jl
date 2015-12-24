@@ -12,10 +12,11 @@ immutable LogDir
     src::AbstractString
     dest::AbstractString
     awsbkt::AbstractString
+    subbkt::AbstractString
 
-    function LogDir(src, dest, awsbkt)
+    function LogDir(src, dest, awsbkt, subbkt)
         !isdir(src) && error("Directory $src does not exist.")
-        new(src, dest, awsbkt)
+        new(src, dest, awsbkt, subbkt)
     end
 end
 
@@ -28,11 +29,11 @@ Context for argument passing.
 type LogMoverCtx
     db::SQLite.DB
     awsenv::AWSEnv
-    last_upload_time::Float64
-    new_upload_time::Float64
+    last_upload_time::DateTime
+    new_upload_time::DateTime
 
     function LogMoverCtx(db, awsenv)
-        new(db, awsenv, 0, 0)
+        new(db, awsenv, DateTime(), DateTime())
     end
 end
 
